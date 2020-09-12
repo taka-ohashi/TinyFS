@@ -1,0 +1,111 @@
+##################################################
+
+Name:
+Takanori Ohashi
+Isaac Trotta
+
+Course:
+CPE453 Fall
+
+##################################################
+
+Implementation:
+
+Superblock:
+Superblock Structure:
+    superblock number (1),
+    magic number (0x44),
+    first free block,
+    number of files, and
+    inode addresses
+
+We implemented our free blocks are linked and the address
+of the first free block is contained in the superblock.
+The remaining bytes of the super block after it is populated
+by the superblock number, magic number, the address of the first free
+block, and the number of files are reserved for inode blocks.
+
+Inode Blocks:
+Inode Block Structure:
+    inode block number (2),
+    magic number (0x44),
+    file extent address,
+    file name,
+    creation time,
+    modification time, and
+    access time
+
+File Extent Block:
+File Extent Block Structure:
+    file extent block number (3),
+    magic number (0x44),
+    next file extent block address,
+    file content (252 bytes)
+
+File extent blocks are connected in a linked fashion
+After subtracting the byte spaces taken up by meta data,
+our file extent blocks can hold up to 252 bytes of data.
+
+Free Blocks:
+Free Block Structure:
+    free block number (4), and
+    next free block address
+
+The free blocks are linked and each block contains the address to the
+next free block. This address can then be used retrieve the next
+free block using the readBlock function from the disk driver.
+
+##################################################
+
+Testing:
+
+DiskDriver:
+Driver passes the given test cases.
+
+TinyFS:
+ It can successfully create inodes when opening files and create file extents when writing files, as well as linking them together correctly.
+ tinyfs can correctly set up an drive initially when calling mkfs.
+
+##################################################
+
+Trade-offs:
+
+Disk size is limited to 256 x BLOCKSIZE(256) = 65,536 because we used 8 bits per
+address.
+We have a max number of files that our system can support, which is the number of
+Inode addresses that the superblock can support.
+Because the file extents are linked instead of being implemented contiguously,
+external fragmentation is prevented.
+We implemented linked lists for free blocks to be consistent with the file extent format,
+which was also implemented with linked lists.
+
+##################################################
+
+Additional Features:
+Time stamps:
+The creation time is written from the 20th byte of the inode block
+The modify time is written from the 50th byte of the inode block
+The access time is written from the 50th byte of the inode block
+
+char * return_creation_time(fileDescriptor FD){
+	char * output;
+	int location = fd_exists(FD);
+	uint8_t inodeaddr = resourceTable[location].inodeAddr;
+	uint8_t inodeBlock[BLOCKSIZE];
+	readBlock(disk, inodeaddr, inodeBlock);
+	printf("here 2");
+	memcpy(output, &inodeBlock[CREATE_TIME_INDEX], 24);
+	printf("%s\n", output);
+	return output;
+}
+
+This function is included in the very bottom of tinyFS.
+Although the time stamps are stored in the inode blocks, (Can verify by checking the inode blocks in the disk)
+our test results in a segmentation fault when trying to read them out.
+
+
+##################################################
+
+limitation:
+readByte has unknown untested behavior in edge cases.
+As part of trade-offs, open and write files have unknown behavior in edge cases (running out of free blocks ect.)
